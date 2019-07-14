@@ -87,7 +87,7 @@ export default {
   name: "HelloWorld",
   data() {
     return {
-      ip: "192.168.11.139",
+      ip: "192.168.1.1",
       snapshotUrl: "",
       responseText: "",
       cookie: "",
