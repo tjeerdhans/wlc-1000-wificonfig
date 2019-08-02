@@ -16,3 +16,5 @@ npm run electron:serve
 ```
 npm run electron:build
 ```
+### Screenshot
+![Screenshot](2019-08-02 18_42_29-wlc-1000-config.png)
