@@ -17,4 +17,4 @@ npm run electron:serve
 npm run electron:build
 ```
 ### Screenshot
-![Screenshot](2019-08-02 18_42_29-wlc-1000-config.png)
+![Screenshot](https://github.com/tjeerdhans/wlc-1000-wificonfig/blob/master/2019-08-02%2018_42_29-wlc-1000-config.png)
