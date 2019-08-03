@@ -1,4 +1,5 @@
 <img alt="Photo of the WLC-1000" src="https://github.com/tjeerdhans/wlc-1000-wificonfig/blob/master/camera.png" align="right">
+
 # wlc-1000-config
 
 Electron-based tool to update wifi settings in a Sitecom WLC-1000 Home Cam Mini.
