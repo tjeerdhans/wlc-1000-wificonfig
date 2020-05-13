@@ -1,7 +1,8 @@
 <template>
   <div id="configurator">
     <div style="float:right;">
-      <label for="snapshot">Snapshot</label><br>
+      <label for="snapshot">Snapshot</label>
+      <br />
       <div style="height: 180px; border: 1px solid grey; display: block">
         <img id="snapshot" :src="snapshotUrl" style="height: 180px" v-if="snapshotUrl!==''" />
       </div>
@@ -16,6 +17,10 @@
         <br />
 
         <textarea name="responseText" id="responseText" cols="38" rows="10" v-model="responseText"></textarea>
+        <br />
+        <label for="settings">Settings</label>
+        <br />
+        <textarea name="settings" id="settings" cols="38" rows="10" v-model="settings"></textarea>
       </p>
       <div v-if="aps.length>0">
         <h4>Detected access points (APs)</h4>
@@ -74,9 +79,65 @@
         <strong>Apply</strong>
       </button>
     </p>
+    <h2>Settings</h2>
+    <p>
+      <label for="motiondetection">Motion detection</label>
+      <br />
+      <input
+        type="radio"
+        name="motiondetection"
+        id="motiondetection_on"
+        value="ON"
+        v-model="motiondetection"
+      />
+      <label for="motiondetection_on">On</label>
+      <input
+        type="radio"
+        name="motiondetection"
+        id="motiondetection_off"
+        value="OFF"
+        v-model="motiondetection"
+      />
+      <label for="motiondetection_off">Off</label>
+      <button @click="setMotiondetection">
+        <strong>Apply</strong>
+      </button>
+    </p>
+    <p>
+      <label for="audiodetection">Audio detection</label>
+      <br />
+      <input
+        type="radio"
+        name="audiodetection"
+        id="audiodetection_on"
+        value="ON"
+        v-model="audiodetection"
+      />
+      <label for="audiodetection_on">On</label>
+      <input
+        type="radio"
+        name="audiodetection"
+        id="audiodetection_off"
+        value="OFF"
+        v-model="audiodetection"
+      />
+      <label for="audiodetection_off">Off</label>
+      <button @click="setAudiodetection">
+        <strong>Apply</strong>
+      </button>
+      <br />
+      <button @click="setNtp">
+        <strong>Set NTP</strong>
+      </button>
+      <br />
+      <button @click="setOSD">
+        <strong>Set OSD on</strong>
+      </button>
+    </p>
     <h2>Other tools</h2>
     <button @click="scanAP">Scan for access points</button>
     <button @click="cameraLogin">Get login cookie</button>
+    <button @click="cameraLogout">Logout camera</button>
   </div>
 </template>
 
@@ -87,14 +148,17 @@ export default {
   name: "HelloWorld",
   data() {
     return {
-      ip: "192.168.1.1",
+      ip: "192.168.11.188",
       snapshotUrl: "",
       responseText: "",
+      settings: "",
       cookie: "",
       ssid: "",
       cipher: "",
       password: "",
-      aps: []
+      aps: [],
+      motiondetection: "ON",
+      audiodetection: "ON"
     };
   },
   methods: {
@@ -111,6 +175,20 @@ export default {
         )
         // eslint-disable-next-line
         .on("error", error => console.log(error));
+    },
+    cameraLogout() {
+      if (this.cookie !== "") {
+        http
+          .post(`http://${this.ip}/CGI/RemoteControl`, {
+            headers: { Cookie: this.cookie, "Content-Type": "text/plain" },
+            body: "<RemoteControl><Action>RESTART</Action></RemoteControl>"
+          })
+          // eslint-disable-next-line
+          .on("response", response => {
+            this.cookie="";
+            this.getCloudModeInfo();
+          });
+      }
     },
     scanAP() {
       http
@@ -161,6 +239,86 @@ export default {
           });
         });
     },
+    setMotiondetection() {
+      const postString =
+        this.motiondetection === "ON"
+          ? "<Item><MOTION_DETECTION><ENABLE>ON</ENABLE><SENSITIVITY>3</SENSITIVITY></MOTION_DETECTION></Item>"
+          : "<Item><MOTION_DETECTION><ENABLE>OFF</ENABLE><SENSITIVITY>0</SENSITIVITY></MOTION_DETECTION></Item>";
+      http
+        .post(`http://${this.ip}/CGI/CameraLogin`)
+        .on("data", data => (this.responseText = data))
+        .on("response", response => {
+          this.cookie = response.headers["set-cookie"];
+          http
+            .post(`http://${this.ip}/CGI/CameraSetup`, {
+              headers: { Cookie: this.cookie, "Content-Type": "text/plain" },
+              body: postString
+            })
+            // eslint-disable-next-line
+            .on("response", response => {
+              this.getCameraSetting();
+            });
+        });
+    },
+    setNtp() {
+      const postString =
+        "<Item><TIME_ZONE><GMT>+1</GMT><NTP>router.lan</NTP></TIME_ZONE></Item>";
+      http
+        .post(`http://${this.ip}/CGI/CameraLogin`)
+        .on("data", data => (this.responseText = data))
+        .on("response", response => {
+          this.cookie = response.headers["set-cookie"];
+          http
+            .post(`http://${this.ip}/CGI/CameraSetup`, {
+              headers: { Cookie: this.cookie, "Content-Type": "text/plain" },
+              body: postString
+            })
+            // eslint-disable-next-line
+            .on("response", response => {
+              this.getCameraSetting();
+            });
+        });
+    },
+    setOSD() {
+      const postString =
+        "<Item><LIGHT>OFF</LIGHT></Item><Item><OSD><Chan><Idx>0</Idx><Enable>ON</Enable><X>0.000000</X><Y>0.000000</Y><CNT>{Time}</CNT><Color>WHITE</Color><Size>1X</Size></Chan><Chan><Idx>1</Idx><Enable>ON</Enable><X>1.000000</X><Y>1.000000</Y><CNT>{Time}</CNT><Color>WHITE</Color><Size>1X</Size></Chan></OSD></Item>";
+      http
+        .post(`http://${this.ip}/CGI/CameraLogin`)
+        .on("data", data => (this.responseText = data))
+        .on("response", response => {
+          this.cookie = response.headers["set-cookie"];
+          http
+            .post(`http://${this.ip}/CGI/CameraSetup`, {
+              headers: { Cookie: this.cookie, "Content-Type": "text/plain" },
+              body: postString
+            })
+            // eslint-disable-next-line
+            .on("response", response => {
+              this.getCameraSetting();
+            });
+        });
+    },
+    setAudiodetection() {
+      const postString =
+        this.motiondetection === "ON"
+          ? "<Item><AUDIO_DETECTION><ENABLE>ON</ENABLE><SENSITIVITY>3</SENSITIVITY></AUDIO_DETECTION></Item>"
+          : "<Item><AUDIO_DETECTION><ENABLE>OFF</ENABLE><SENSITIVITY>0</SENSITIVITY></AUDIO_DETECTION></Item>";
+      http
+        .post(`http://${this.ip}/CGI/CameraLogin`)
+        .on("data", data => (this.responseText = data))
+        .on("response", response => {
+          this.cookie = response.headers["set-cookie"];
+          http
+            .post(`http://${this.ip}/CGI/CameraSetup`, {
+              headers: { Cookie: this.cookie, "Content-Type": "text/plain" },
+              body: postString
+            })
+            // eslint-disable-next-line
+            .on("response", response => {
+              this.getCameraSetting();
+            });
+        });
+    },
     applyChanges() {
       //http://192.168.1.1/CGI/RemoteControl
       //<RemoteControl><Action>GOCLOUD</Action></RemoteControl>
@@ -195,6 +353,15 @@ export default {
         //console.table(data, encoded);
         //this.cookie = data === encoded;
       });
+    },
+    getCameraSetting() {
+      http
+        .get(
+          `http://${this.ip}/CGI/CameraSetting?MOTION_DETECTION&AUDIO_DETECTION&OSD&TIME_ZONE&TIME&LIGHT&NAME`
+        )
+        .on("data", data => {
+          this.settings = data;
+        });
     },
     decode(bytes) {
       let decoded = new Uint8Array(bytes.length - 2);
